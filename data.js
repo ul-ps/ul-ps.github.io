@@ -1538,3 +1538,6 @@ if (document.readyState === 'loading') {
 } else {
     UI.init();
 }
+
+// 🚀 START FIREBASE SYNC BACKGROUND PROCESS
+store.initFirebase();
