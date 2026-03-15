@@ -77,13 +77,36 @@ class AppStore {
             this._setDoc = setDoc;
             
             // Listen for changes from other devices
+            const localWasEmpty = !localStorage.getItem(DB_KEY);
+            this._firstSync = true;
+
             onSnapshot(this.cloudDocRef, (snapshot) => {
                 const cloudData = snapshot.data();
                 if (snapshot.exists() && cloudData && cloudData.lastUpdated > (this.data.lastUpdated || 0)) {
-                    console.log('☁️ Cloud Update Received');
+                    console.log('☁️ Cloud Update Received — reloading...');
                     this.data = cloudData;
                     localStorage.setItem(DB_KEY, JSON.stringify(this.data));
-                    window.dispatchEvent(new CustomEvent('db-update', { detail: this.data }));
+
+                    // On first sync (fresh device with no local data): reload page to show cloud data
+                    if (this._firstSync && localWasEmpty) {
+                        this._firstSync = false;
+                        location.reload();
+                        return;
+                    }
+                    this._firstSync = false;
+
+                    // On subsequent updates from another device: reload if user isn't in a modal
+                    const openModal = document.querySelector('.modal-overlay.active');
+                    if (!openModal) {
+                        location.reload();
+                    } else {
+                        // If user is busy in a modal, just dispatch event quietly
+                        window.dispatchEvent(new CustomEvent('db-update', { detail: this.data }));
+                    }
+                } else {
+                    this._firstSync = false;
+                }
+
                 }
             });
             console.log('✅ Firebase Firestore Connected');
