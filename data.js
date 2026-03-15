@@ -76,37 +76,25 @@ class AppStore {
             this.cloudDocRef = doc(this.db, "accounting_systems", CLOUD_SYNC_KEY);
             this._setDoc = setDoc;
             
-            // Listen for changes from other devices
             const localWasEmpty = !localStorage.getItem(DB_KEY);
-            this._firstSync = true;
+            let hasReloaded = false;
 
             onSnapshot(this.cloudDocRef, (snapshot) => {
                 const cloudData = snapshot.data();
                 if (snapshot.exists() && cloudData && cloudData.lastUpdated > (this.data.lastUpdated || 0)) {
-                    console.log('☁️ Cloud Update Received — reloading...');
+                    console.log('☁️ Cloud Update Received');
                     this.data = cloudData;
                     localStorage.setItem(DB_KEY, JSON.stringify(this.data));
 
-                    // On first sync (fresh device with no local data): reload page to show cloud data
-                    if (this._firstSync && localWasEmpty) {
-                        this._firstSync = false;
+                    // If this device had no local data (fresh install), reload ONCE to show cloud data
+                    if (localWasEmpty && !hasReloaded) {
+                        hasReloaded = true;
                         location.reload();
                         return;
                     }
-                    this._firstSync = false;
 
-                    // On subsequent updates from another device: reload if user isn't in a modal
-                    const openModal = document.querySelector('.modal-overlay.active');
-                    if (!openModal) {
-                        location.reload();
-                    } else {
-                        // If user is busy in a modal, just dispatch event quietly
-                        window.dispatchEvent(new CustomEvent('db-update', { detail: this.data }));
-                    }
-                } else {
-                    this._firstSync = false;
-                }
-
+                    // Otherwise just notify any listening page components
+                    window.dispatchEvent(new CustomEvent('db-update', { detail: this.data }));
                 }
             });
             console.log('✅ Firebase Firestore Connected');
