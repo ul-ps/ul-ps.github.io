@@ -51,6 +51,7 @@ class AppStore {
     constructor() {
         this.data = this.load();
         this.migrate();
+        this._pendingSync = false;  // flag: save() was called before Firebase ready
         this.initFirebase();
     }
 
@@ -76,28 +77,41 @@ class AppStore {
             this.cloudDocRef = doc(this.db, "accounting_systems", CLOUD_SYNC_KEY);
             this._setDoc = setDoc;
             
-            const localWasEmpty = !localStorage.getItem(DB_KEY);
-            let hasReloaded = false;
+            // Record the timestamp of local data at startup
+            const startupTimestamp = this.data.lastUpdated || 0;
+            let syncReloaded = false;
 
             onSnapshot(this.cloudDocRef, (snapshot) => {
                 const cloudData = snapshot.data();
-                if (snapshot.exists() && cloudData && cloudData.lastUpdated > (this.data.lastUpdated || 0)) {
-                    console.log('☁️ Cloud Update Received');
+                if (!snapshot.exists() || !cloudData) return;
+
+                const cloudTimestamp = cloudData.lastUpdated || 0;
+
+                // Cloud has newer data than what we loaded at startup → reload ONCE
+                if (cloudTimestamp > startupTimestamp && !syncReloaded) {
+                    console.log('☁️ Newer data from cloud, reloading...');
                     this.data = cloudData;
                     localStorage.setItem(DB_KEY, JSON.stringify(this.data));
+                    syncReloaded = true;
+                    location.reload();
+                    return;
+                }
 
-                    // If this device had no local data (fresh install), reload ONCE to show cloud data
-                    if (localWasEmpty && !hasReloaded) {
-                        hasReloaded = true;
-                        location.reload();
-                        return;
-                    }
-
-                    // Otherwise just notify any listening page components
+                // Cloud has newer data that arrived AFTER a reload (live update from other device)
+                if (cloudTimestamp > (this.data.lastUpdated || 0)) {
+                    console.log('☁️ Live update received');
+                    this.data = cloudData;
+                    localStorage.setItem(DB_KEY, JSON.stringify(this.data));
                     window.dispatchEvent(new CustomEvent('db-update', { detail: this.data }));
                 }
             });
             console.log('✅ Firebase Firestore Connected');
+            // Flush any saves that happened before Firebase was ready
+            if (this._pendingSync) {
+                console.log('☁️ Flushing pending sync...');
+                this._pendingSync = false;
+                this.syncToCloud();
+            }
         } catch (e) {
             console.warn('⚠️ Firebase Init Error (running offline):', e.message);
         }
@@ -122,12 +136,21 @@ class AppStore {
     }
 
     async syncToCloud() {
-        if (!this._setDoc || !this.cloudDocRef) return;
+        if (!this._setDoc || !this.cloudDocRef) {
+            // Firebase not ready — mark as pending so it syncs once connected
+            this._pendingSync = true;
+            console.warn('☁️ Firebase not ready, queued for sync after connect');
+            return;
+        }
         try {
             await this._setDoc(this.cloudDocRef, this.data);
-            console.log('☁️ Cloud Sync Successful');
+            console.log('☁️ Cloud Sync OK ✅ lastUpdated:', this.data.lastUpdated);
         } catch (e) {
-            console.warn('☁️ Cloud Sync Failed:', e.message);
+            console.error('☁️ Cloud Sync FAILED ❌:', e.message);
+            // Show visible error so user knows data isn't syncing
+            if (window.UI && UI.toast) {
+                UI.toast('⚠️ فشل الحفظ السحابي: ' + (e.code === 'permission-denied' ? 'تحقق من Firestore Rules' : e.message), 'danger');
+            }
         }
     }
 
