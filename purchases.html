@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المشتريات | المحاسب الذكي</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+
+    <main>
+        <div class="page-header">
+            <h1 class="page-title"><i class="fa-solid fa-cart-arrow-down"></i> المشتريات</h1>
+            <button class="btn btn-primary" onclick="openAddModal()"><i class="fa-solid fa-plus-circle"></i> إضافة مشتريات</button>
+        </div>
+
+        <div class="form-list-grid">
+            <!-- Purchase Form -->
+            <div class="stat-card" style="height: fit-content;">
+                <h3>فاتورة شراء جديدة</h3>
+                <form id="purchase-form">
+                    <div class="form-group">
+                        <label>المورد</label>
+                        <select id="p-supplier" required>
+                            <option value="">-- اختر المورد --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>العملة</label>
+                        <select id="p-currency">
+                            <!-- JS Populated -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>حالة الدفع</label>
+                        <select id="p-status">
+                            <option value="paid">نقدي (مدفوع)</option>
+                            <option value="debt">دين (غير مدفوع)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>المبلغ</label>
+                        <input type="number" id="p-amount" min="1" step="0.01" required placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>ملاحظات / تفاصيل</label>
+                        <textarea id="p-notes" rows="3" placeholder="تفاصيل البضاعة..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">تسجيل الفاتورة</button>
+                </form>
+            </div>
+
+            <!-- Recent Purchases List -->
+            <div class="table-container">
+                <div class="filters-bar" style="margin-bottom:15px; padding:10px; gap:8px;">
+                    <h3 style="flex:1; min-width:100%; margin-bottom:5px;">سجل فواتير الشراء</h3>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; width:100%;">
+                        <input type="date" id="filter-date" class="filter-control" style="flex:1; min-width:140px;">
+                        <select id="filter-period" class="filter-control" style="flex:1; min-width:120px;">
+                            <option value="ALL">كل الوقت</option>
+                            <option value="TODAY">اليوم</option>
+                            <option value="WEEK" selected>آخر أسبوع</option>
+                            <option value="MONTH">هذا الشهر</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="overflow-x:auto; width:100%;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>المورد</th>
+                                <th>المبلغ</th>
+                                <th>الحالة</th>
+                                <th>ملاحظات</th>
+                                <th>إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="purchases-list">
+                            <!-- Loaded dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="data.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('purchase-form');
+            const supplierSelect = document.getElementById('p-supplier');
+            const tbody = document.getElementById('purchases-list');
+
+            function loadSuppliers() {
+                const suppliers = store.getSuppliers();
+                supplierSelect.innerHTML = '<option value="">-- اختر المورد --</option>';
+                suppliers.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.id;
+                    opt.textContent = s.name;
+                    supplierSelect.appendChild(opt);
+                });
+            }
+
+            // NEW: Currency init
+            const curSelect = document.getElementById('p-currency');
+            curSelect.innerHTML = UI.getCurrencyOptions();
+
+            let editingId = null;
+            const submitBtn = form.querySelector('button[type="submit"]');
+
+            const filterDate = document.getElementById('filter-date');
+            const filterPeriod = document.getElementById('filter-period');
+
+            function loadPurchases() {
+                let purchases = store.data.purchases.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+                // Filtering Logic
+                const period = filterPeriod.value;
+                const manualDate = filterDate.value ? new Date(filterDate.value) : null;
+                const now = new Date();
+
+                purchases = purchases.filter(p => {
+                    const d = new Date(p.createdAt);
+                    if (manualDate) {
+                        return d.toDateString() === manualDate.toDateString();
+                    }
+                    if (period === 'TODAY') return d.toDateString() === now.toDateString();
+                    if (period === 'WEEK') {
+                        const weekAgo = new Date(); weekAgo.setDate(now.getDate() - 7);
+                        return d >= weekAgo;
+                    }
+                    if (period === 'MONTH') {
+                        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                    }
+                    return true;
+                });
+
+                const suppliers = store.getSuppliers();
+                tbody.innerHTML = '';
+
+                purchases.forEach(p => {
+                    const sup = suppliers.find(s => s.id === p.supplierId);
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${new Date(p.createdAt).toLocaleDateString('ar-EG')}</td>
+                        <td>${sup ? sup.name : 'مورد محذوف'}</td>
+                        <td style="font-weight:bold;">${UI.formatMoney(p.amount, p.currency)}</td>
+                        <td>${p.isPaid === false ? '<span style="color:#dc2626; font-weight:bold;"><i class="fa-solid fa-circle-exclamation"></i> دين</span>' : '<span style="color:#16a34a;"><i class="fa-solid fa-circle-check"></i> كاش</span>'}</td>
+                        <td>${p.notes || '-'}</td>
+                        <td>
+                            <div style="display:flex; gap:5px;">
+                                <button class="btn" style="padding:4px 8px; font-size:0.75rem; background:#f0f0f0;" onclick='printPurchase(${JSON.stringify(p)}, "${sup ? sup.name : 'مورد محذوف'}")'><i class="fa-solid fa-print"></i></button>
+                                <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem;" onclick='editPurchase(${JSON.stringify(p)})'><i class="fa-solid fa-pen-to-square"></i></button>
+                                <button class="btn btn-danger" style="padding:4px 8px; font-size:0.75rem;" onclick="deletePurchase('${p.id}')"><i class="fa-solid fa-xmark"></i></button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                if (purchases.length === 0) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">لا توجد مشتريات في هذه الفترة</td></tr>';
+            }
+
+            // Listeners for filters
+            filterPeriod.addEventListener('change', loadPurchases);
+            filterDate.addEventListener('change', loadPurchases);
+
+            window.deletePurchase = (id) => {
+                UI.confirm('هل تريد حذف هذه الفاتورة؟ سيتم عكس تأثيرها المالي.', 'حذف فاتورة شراء', () => {
+                    store.deletePurchase(id);
+                    loadPurchases();
+                });
+            };
+
+            window.editPurchase = (p) => {
+                editingId = p.id;
+                supplierSelect.value = p.supplierId;
+                curSelect.value = p.currency || 'ILS';
+                document.getElementById('p-amount').value = p.amount;
+                document.getElementById('p-notes').value = p.notes || '';
+                document.getElementById('p-status').value = p.isPaid === false ? 'debt' : 'paid';
+
+                submitBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> حفظ التعديلات';
+                submitBtn.classList.remove('btn-primary');
+                submitBtn.classList.add('btn-success');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+
+            window.printPurchase = (p, supName) => {
+                const printWindow = window.open('', '_blank');
+                const date = new Date(p.createdAt).toLocaleDateString('ar-EG');
+                const content = `
+                    <html dir="rtl" lang="ar">
+                    <head>
+                        <title>فاتورة شراء - ${supName}</title>
+                        <style>
+                            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #333; }
+                            .header { text-align: center; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 30px; }
+                            .details { margin-bottom: 30px; }
+                            .details div { margin-bottom: 10px; font-size: 1.1rem; }
+                            .footer { margin-top: 50px; text-align: center; font-size: 0.9rem; color: #777; border-top: 1px solid #eee; padding-top: 20px; }
+                            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                            th, td { border: 1px solid #eee; padding: 12px; text-align: right; }
+                            th { background: #f9f9f9; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="header">
+                            ${store.getBranding().logo ? `<img src="${store.getBranding().logo}" style="height:60px; margin-bottom:10px;">` : ''}
+                            <h1>فاتورة شراء بضاعة</h1>
+                            <p>${store.getBranding().name}</p>
+                        </div>
+                        <div class="details">
+                            <div><strong>التاريخ:</strong> ${date}</div>
+                            <div><strong>المورد:</strong> ${supName}</div>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>الوصف / ملاحظات</th>
+                                    <th>المبلغ الإجمالي</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>${p.notes || 'مشتريات بضاعة'}</td>
+                                    <td style="font-size:1.2rem; font-weight:bold;">${UI.formatMoney(p.amount, p.currency)}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="footer">
+                            <p>شكراً لتعاملكم معنا</p>
+                            <p>تاريخ الطباعة: ${new Date().toLocaleString('ar-EG')}</p>
+                        </div>
+                        <script>window.print(); setTimeout(() => window.close(), 500);<\/script>
+                    </body>
+                    </html>
+                `;
+                printWindow.document.write(content);
+                printWindow.document.close();
+            };
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const supplierId = supplierSelect.value;
+
+                try {
+                    // If editing, delete old first
+                    if (editingId) {
+                        store.deletePurchase(editingId);
+                    }
+
+                    store.addPurchase({
+                        supplierId,
+                        currency: curSelect.value,
+                        amount: document.getElementById('p-amount').value,
+                        notes: document.getElementById('p-notes').value,
+                        isPaid: document.getElementById('p-status').value === 'paid',
+                        date: new Date().toISOString()
+                    });
+
+                    // Reset Mode
+                    editingId = null;
+                    submitBtn.textContent = 'تسجيل الفاتورة';
+                    submitBtn.classList.add('btn-primary');
+                    submitBtn.classList.remove('btn-success');
+
+                    form.reset();
+                    loadPurchases();
+                    UI.toast('تم الحفظ بنجاح');
+                } catch (err) {
+                    UI.toast('خطأ: ' + err.message, 'danger');
+                }
+            });
+
+            loadSuppliers();
+            loadPurchases();
+        });
+    </script>
+</body>
+
+</html>
