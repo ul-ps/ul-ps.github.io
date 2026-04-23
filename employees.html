@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الموظفين | المحاسب الذكي</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+
+    <main>
+        <div class="page-header">
+            <h1 class="page-title"><i class="fa-solid fa-user-tie"></i> إدارة الموظفين</h1>
+            <div class="header-actions" style="display:flex; gap:10px;">
+                <button class="btn btn-primary" onclick="openEmployeeModal()"><i class="fa-solid fa-user-plus"></i> إضافة موظف</button>
+                <button class="btn btn-secondary" onclick="repairBalances()"
+                    style="background:#475569; color:white; font-size:0.75rem; padding:8px 12px;"
+                    title="إعادة مزامنة الأرصدة والسجلات"><i class="fa-solid fa-gears"></i> صيانة البيانات</button>
+            </div>
+        </div>
+
+        <div class="filters-bar" style="margin-bottom: 2rem;">
+            <div class="search-input-wrapper">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="emp-search" class="search-input-premium" placeholder="ابحث عن موظف بالاسم، المسمى الوظيفي، أو الهاتف..." oninput="renderEmployees()">
+            </div>
+        </div>
+
+        <!-- Employee Form Modal -->
+        <div class="modal-overlay" id="employee-modal">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h2 id="form-title" style="margin:0; font-size:1.3rem;">إضافة موظف جديد</h2>
+                    <button onclick="closeEmployeeModal()"
+                        style="background:none; border:none; font-size:1.8rem; cursor:pointer; color:#94a3b8;">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="add-emp-form">
+                        <input type="hidden" id="emp-id">
+                        <div class="form-group">
+                            <label>اسم الموظف</label>
+                            <input type="text" id="emp-name" required placeholder="الاسم الكامل">
+                        </div>
+                        <div class="form-group">
+                            <label>رقم الهاتف</label>
+                            <input type="text" id="emp-phone" placeholder="رقم الموبايل">
+                        </div>
+                        <div class="form-group">
+                            <label>المسمى الوظيفي</label>
+                            <input type="text" id="emp-role" placeholder="مثلاً: مندوب، محاسب، إدارة">
+                        </div>
+                        <div class="form-group">
+                            <label>الراتب المتفق عليه</label>
+                            <input type="number" id="emp-salary" placeholder="0.00">
+                        </div>
+                        <div class="form-group"
+                            style="display:flex; align-items:center; gap:8px; margin-bottom:15px; background:#f0f9ff; padding:10px; border-radius:8px;">
+                            <input type="checkbox" id="emp-is-partner" style="width:20px; height:20px; cursor:pointer;">
+                            <label for="emp-is-partner"
+                                style="margin:0; font-weight:bold; color:#0369a1; cursor:pointer;">شريك / مستثمر (صاحب
+                                رأس
+                                مال)</label>
+                        </div>
+                        <div style="display:flex; gap:10px; margin-top:1rem;">
+                            <button type="submit" id="submit-btn" class="btn btn-primary" style="flex:1;">+ حفظ
+                                الموظف</button>
+                            <button type="button" class="btn" style="background:#94a3b8; color:white;"
+                                onclick="closeEmployeeModal()">إلغاء</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 2rem;">
+            <h3>قائمة الموظفين والطاقم</h3>
+            <div id="emp-list" class="products-grid">
+                <!-- Loaded dynamically -->
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="history-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title" id="history-modal-title">سجل عمليات الشريك</h3>
+                    <button class="modal-close" onclick="closeHistoryModal()"
+                        style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
+                </div>
+                <div class="modal-body" id="history-modal-body">
+                    <!-- Dynamic -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Employee Preview Modal -->
+        <div class="modal-overlay" id="preview-modal">
+            <div class="modal-content" style="max-width: 550px;">
+                <div class="modal-header" style="background:#f8fafc;">
+                    <h3 class="modal-title"><i class="fa-solid fa-id-card"></i> تفاصيل الموظف</h3>
+                    <button class="modal-close" onclick="closePreviewModal()">✕</button>
+                </div>
+                <div class="modal-body" id="preview-modal-body">
+                    <!-- Data here -->
+                </div>
+                <div
+                    style="padding: 1.5rem; background: #f8fafc; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 10px;">
+                    <button class="btn btn-secondary" onclick="closePreviewModal()">إغلاق</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manage Funds Modal -->
+        <div class="modal-overlay" id="funds-modal">
+            <div class="modal-content" style="max-width: 450px;">
+                <div class="modal-header">
+                    <h3 class="modal-title" id="funds-modal-title">إدارة الرصيد</h3>
+                    <button class="modal-close" onclick="closeFundsModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p id="funds-modal-msg" style="margin-bottom:1rem; font-weight:600; color:#475569; line-height:1.5;"></p>
+                    <form id="funds-form">
+                        <input type="hidden" id="funds-emp-id">
+                        <input type="hidden" id="funds-type">
+                        <div class="form-group">
+                            <label>المبلغ</label>
+                            <input type="number" id="funds-amount" required step="0.01" placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label>العملة</label>
+                            <select id="funds-currency" class="filter-input" style="width:100%;">
+                                <!-- Dynamic -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>ملاحظات (اختياري)</label>
+                            <textarea id="funds-notes" placeholder="ملاحظات توضيحية للعملية..." style="width:100%; height:80px; border:1px solid #cbd5e1; border-radius:8px; padding:10px; font-family:inherit;"></textarea>
+                        </div>
+                        <div style="display:flex; gap:10px; margin-top:1rem;">
+                            <button type="submit" class="btn btn-primary" style="flex:1;">تأكيد العملية <i class="fa-solid fa-check"></i></button>
+                            <button type="button" class="btn btn-secondary" onclick="closeFundsModal()">إلغاء</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="data.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('add-emp-form');
+            const submitBtn = document.getElementById('submit-btn');
+            const formTitle = document.getElementById('form-title');
+            const employeeModal = document.getElementById('employee-modal');
+
+            // Modal Controls
+            window.openEmployeeModal = () => {
+                employeeModal.classList.add('active');
+                resetForm();
+            };
+
+            window.closeEmployeeModal = () => {
+                employeeModal.classList.remove('active');
+                resetForm();
+            };
+
+            function renderEmployees() {
+                const query = document.getElementById('emp-search').value.toLowerCase();
+                const employees = store.getEmployees().filter(e => 
+                    e.name.toLowerCase().includes(query) || 
+                    (e.role && e.role.toLowerCase().includes(query)) ||
+                    (e.phone && e.phone.includes(query))
+                );
+                
+                const container = document.getElementById('emp-list');
+                const curs = store.getCurrencies();
+                container.innerHTML = '';
+
+                employees.forEach(e => {
+                    // Determine Card Style based on Role
+                    const isPartner = e.isPartner;
+                    const cardBg = isPartner
+                        ? 'linear-gradient(135deg, #fffbeb 0%, #fff 100%)'
+                        : 'white';
+                    const borderColor = isPartner ? '#f59e0b' : 'transparent';
+                    const roleBadge = isPartner
+                        ? `<span class="badge" style="background:#fef3c7; color:#d97706; border:1px solid #fcd34d;"><i class="fa-solid fa-star"></i> شريك / مستثمر</span>`
+                        : '<span class="badge" style="background:#e0e7ff; color:#3730a3;"><i class="fa-solid fa-user-tie"></i> موظف</span>';
+                    const icon = isPartner ? '<i class="fa-solid fa-crown"></i>' : '<i class="fa-solid fa-person-digging"></i>';
+
+                    // Header Color
+                    const headerGradient = isPartner
+                        ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                        : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)';
+
+                    // Balance Calculation
+                    let balanceHtml = '';
+                    let balances = [];
+                    curs.forEach(c => {
+                        const val = (e.partnerBalance && e.partnerBalance[c.code]) || 0;
+                        if (val > 0) {
+                            balances.push(`<div style="font-size:0.8rem; font-weight:bold; color:#d97706;" title="المشروع مدين له"><i class="fa-solid fa-money-bill-wave"></i> ${val.toLocaleString()} ${c.symbol}</div>`);
+                        } else if (val < 0) {
+                            balances.push(`<div style="font-size:0.8rem; font-weight:bold; color:#dc2626;" title="عليه دين للمشروع"><i class="fa-solid fa-caret-down"></i> ${Math.abs(val).toLocaleString()} ${c.symbol}</div>`);
+                        }
+                    });
+                    balanceHtml = balances.length > 0 ? balances.join('') : '<span style="color:#94a3b8; font-size:0.8rem;">رصيد صفر</span>';
+
+                    const card = document.createElement('div');
+                    card.className = 'product-card employee-clickable-card';
+                    card.style.cursor = 'pointer';
+                    card.style.position = 'relative';
+                    card.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+
+                    // Add distinct border for partners
+                    if (isPartner) {
+                        card.style.border = '2px solid #fcd34d';
+                        card.style.background = 'linear-gradient(135deg, #fffbeb 0%, #fff 100%)';
+                    }
+
+                    card.onclick = () => viewEmployeePreview(e.id);
+
+                    card.innerHTML = `
+                         <div class="prod-img" style="height: 120px; background: ${headerGradient}; display:flex; align-items:center; justify-content:center; color:white; position:relative; overflow:hidden;">
+                            <div style="text-align:center; transition: transform 0.3s ease;" class="icon-box">
+                                <span style="font-size: 3.5rem; display:block;">${icon}</span>
+                            </div>
+                            <div style="position:absolute; top:12px; left:12px;">
+                                ${roleBadge}
+                            </div>
+                            <div class="click-hint" style="position:absolute; bottom:0; width:100%; background:rgba(0,0,0,0.2); color:white; font-size:0.7rem; padding:4px; transform:translateY(100%); transition:transform 0.3s;">
+                                اضغط للمعاينة التفصيلية <i class="fa-solid fa-magnifying-glass"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="prod-info" style="text-align:center; padding: 1.5rem;">
+                            <div class="prod-name" style="font-size:1.2rem; font-weight:900; color:#1e293b; margin-bottom:5px;">${e.name}</div>
+                            <div style="font-size:0.9rem; color:#64748b; margin-bottom:15px; font-weight:600;">${e.role || 'بدون مسمى وظيفي'}</div>
+                            
+                            <div style="background:${isPartner ? 'rgba(245, 158, 11, 0.05)' : '#f8fafc'}; padding:15px; border-radius:16px; margin-bottom:15px; border:1px solid ${isPartner ? '#fef3c7' : '#f1f5f9'};">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; border-bottom:1px dashed #e2e8f0; padding-bottom:6px;">
+                                    <span style="color:#64748b;"><i class="fa-solid fa-money-bill"></i> الراتب:</span>
+                                    <span style="font-weight:700; color:#10b981;">${parseFloat(e.salary || 0).toLocaleString()}</span>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; font-size:0.9rem; align-items:flex-start;">
+                                    <span style="color:#64748b;"><i class="fa-solid fa-scale-balanced"></i> الرصيد الحالي:</span>
+                                    <div style="text-align:left; font-weight:700;">${balanceHtml}</div>
+                                </div>
+                            </div>
+
+                            <div style="display:flex; gap:8px;" onclick="event.stopPropagation()">
+                                <button class="btn" onclick="manageFunds('${e.id}', 'INVESTMENT')" style="flex:1; padding:10px; font-size:0.85rem; background:#0ea5e9; color:white; border-radius:12px;" title="إيداع / سداد منه"><i class="fa-solid fa-money-bill-transfer"></i> إيداع</button>
+                                <button class="btn" onclick="manageFunds('${e.id}', 'PAYOUT')" style="flex:1; padding:10px; font-size:0.85rem; background:#f59e0b; color:white; border-radius:12px;" title="سحب / قرض / سلفة"><i class="fa-solid fa-hand-holding-dollar"></i> سحب</button>
+                            </div>
+                            
+                            <div style="display:flex; gap:8px; margin-top:10px;" onclick="event.stopPropagation()">
+                                 <button class="btn btn-secondary" onclick="viewPartnerHistory('${e.id}', '${e.name}')" style="flex:2; padding:8px; font-size:0.85rem; border-radius:12px;"><i class="fa-solid fa-clipboard-list"></i> السجل</button>
+                                 <button class="btn btn-secondary" onclick='editEmployee(${JSON.stringify(e)})' style="flex:1; padding:8px; font-size:0.85rem; border-radius:12px;"><i class="fa-solid fa-pen-to-square"></i></button>
+                                 <button class="btn btn-danger" onclick="deleteEmployee('${e.id}')" style="flex:1; padding:8px; font-size:0.85rem; border-radius:12px;"><i class="fa-solid fa-trash-can"></i></button>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+
+                if (employees.length === 0) {
+                    container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:3rem; color:#94a3b8; background:white; border-radius:16px;">لا يوجد موظفين مضافين حالياً.</div>';
+                }
+            }
+
+            const fundsModal = document.getElementById('funds-modal');
+            const fundsForm = document.getElementById('funds-form');
+
+            window.closeFundsModal = () => fundsModal.classList.remove('active');
+
+            window.manageFunds = (id, type) => {
+                const emp = store.getEmployees().find(e => e.id === id);
+                if (!emp) return;
+
+                const title = type === 'INVESTMENT' ? 'تسجيل مبلغ (إيداع / سداد دين)' : 'تسجيل مبلغ (سحب / قرض)';
+                const msg = type === 'INVESTMENT'
+                    ? `أدخل المبلغ الذي سيسلمه ${emp.name} للصندوق (أو يسدده من دينه):`
+                    : `أدخل المبلغ الذي سيستلمه ${emp.name} من الصندوق (كقرض أو سحب):`;
+
+                document.getElementById('funds-modal-title').textContent = title;
+                document.getElementById('funds-modal-msg').textContent = msg;
+                document.getElementById('funds-emp-id').value = id;
+                document.getElementById('funds-type').value = type;
+                
+                // Reset fields
+                document.getElementById('funds-amount').value = '';
+                document.getElementById('funds-notes').value = '';
+                
+                // Populate currencies
+                const curSelect = document.getElementById('funds-currency');
+                curSelect.innerHTML = store.getCurrencies().map(c => `<option value="${c.code}">${c.name} (${c.symbol})</option>`).join('');
+
+                fundsModal.classList.add('active');
+            };
+
+            fundsForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const id = document.getElementById('funds-emp-id').value;
+                const type = document.getElementById('funds-type').value;
+                const amount = document.getElementById('funds-amount').value;
+                const currency = document.getElementById('funds-currency').value;
+                const notes = document.getElementById('funds-notes').value;
+
+                if (!amount || isNaN(amount)) return UI.toast('يرجى إدخال مبلغ صحيح', 'error');
+
+                try {
+                    store.updatePartnerBalance(id, amount, currency, type, notes);
+                    UI.toast('تمت العملية بنجاح');
+                    closeFundsModal();
+                    renderEmployees();
+                } catch (err) {
+                    alert(err.message);
+                }
+            });
+
+            const historyModal = document.getElementById('history-modal');
+            const historyBody = document.getElementById('history-modal-body');
+            const historyTitle = document.getElementById('history-modal-title');
+
+            window.closeHistoryModal = () => historyModal.classList.remove('active');
+
+            window.viewPartnerHistory = (id, name) => {
+                const logs = store.getPartnerHistory(id);
+                const curs = store.getCurrencies();
+                historyTitle.textContent = `سجل عمليات الشريك: ${name}`;
+
+                let html = '<table style="width:100%;"><thead><tr><th>التاريخ</th><th>النوع</th><th>المبلغ</th><th>ملاحظات</th><th>إجراء</th></tr></thead><tbody>';
+
+                logs.forEach(l => {
+                    const typeLabel = l.type === 'INVESTMENT' ? '<span style="color:#0369a1;">+ استثمار</span>' : '<span style="color:#d97706;">- سحب</span>';
+                    html += `
+                        <tr>
+                            <td>${new Date(l.date).toLocaleDateString('ar-EG')}</td>
+                            <td>${typeLabel}</td>
+                            <td style="font-weight:bold;">${parseFloat(l.amount).toLocaleString()} ${curs.find(c => c.code === l.currency)?.symbol || l.currency}</td>
+                            <td style="font-size:0.8rem; color:#666;">${l.notes || '-'}</td>
+                            <td><button class="btn btn-danger" onclick="deleteLog('${l.id}','${id}','${name}')" style="padding:2px 6px; font-size:0.7rem;"><i class="fa-solid fa-xmark"></i></button></td>
+                        </tr>
+                    `;
+                });
+
+                if (logs.length === 0) html += '<tr><td colspan="4" style="text-align:center; padding:1.5rem; color:#aaa;">لا توجد عمليات مسجلة لهذا الشريك.</td></tr>';
+                html += '</tbody></table>';
+
+                historyBody.innerHTML = html;
+                historyModal.classList.add('active');
+            };
+
+            window.deleteLog = (logId, empId, empName) => {
+                UI.confirm('هل أنت متأكد من حذف هذه العملية؟ سيتم تعديل رصيد الموظف تلقائياً.', 'حذف عملية', () => {
+                    store.deletePartnerLog(logId);
+                    viewPartnerHistory(empId, empName); // Refresh modal
+                    renderEmployees(); // Refresh main table
+                });
+            };
+
+            window.deleteEmployee = (id) => {
+                UI.confirm('هل أنت متأكد من حذف بيانات هذا الموظف؟', 'حذف موظف', () => {
+                    store.deleteEmployee(id);
+                    renderEmployees();
+                });
+            };
+
+            window.repairBalances = () => {
+                UI.confirm('هل تريد إعادة حساب جميع الأرصدة بناءً على سجلات العمليات؟ سيؤدي ذلك لتصحيح أي تضارب بين الرصيد الظاهر والسجل.', 'صيانة البيانات', () => {
+                    store.recalculateBalancesFromHistory();
+                    renderEmployees();
+                    UI.alert('تمت إعادة مزامنة الأرصدة بنجاح <i class="fa-solid fa-check"></i>', 'نجاح');
+                });
+            };
+
+            window.editEmployee = (e) => {
+                document.getElementById('emp-id').value = e.id;
+                document.getElementById('emp-name').value = e.name;
+                document.getElementById('emp-phone').value = e.phone || '';
+                document.getElementById('emp-role').value = e.role || '';
+                document.getElementById('emp-salary').value = e.salary || '';
+                document.getElementById('emp-is-partner').checked = e.isPartner || false;
+
+                formTitle.textContent = 'تعديل بيانات موظف';
+                submitBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> حفظ التعديلات';
+                submitBtn.classList.remove('btn-primary');
+                submitBtn.classList.add('btn-success');
+
+                // Open the modal
+                employeeModal.classList.add('active');
+            };
+
+            window.resetForm = () => {
+                form.reset();
+                document.getElementById('emp-id').value = '';
+                formTitle.textContent = 'إضافة موظف جديد';
+                submitBtn.textContent = '+ حفظ الموظف';
+                submitBtn.classList.add('btn-primary');
+                submitBtn.classList.remove('btn-success');
+            };
+
+            const previewModal = document.getElementById('preview-modal');
+            const previewBody = document.getElementById('preview-modal-body');
+
+            window.closePreviewModal = () => previewModal.classList.remove('active');
+
+            window.viewEmployeePreview = (id) => {
+                const e = store.getEmployees().find(x => x.id === id);
+                const curs = store.getCurrencies();
+                if (!e) return;
+
+                const isPartner = e.isPartner;
+                const icon = isPartner ? '<i class="fa-solid fa-crown"></i>' : '<i class="fa-solid fa-person-digging"></i>';
+                const headerGradient = isPartner
+                    ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                    : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)';
+
+                let balanceRows = '';
+                curs.forEach(c => {
+                    const val = (e.partnerBalance && e.partnerBalance[c.code]) || 0;
+                    const color = val > 0 ? '#d97706' : (val < 0 ? '#dc2626' : '#64748b');
+                    const label = val > 0 ? 'رصيد دائن' : (val < 0 ? 'رصيد مدين' : 'متعادل');
+                    balanceRows += `
+                        <div style="display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px dashed #f1f5f9;">
+                            <span style="color:#64748b; font-weight:500;">${c.name} (${c.code}):</span>
+                            <div style="text-align:left;">
+                                <div style="font-weight:800; color:${color}; font-size:1.1rem;">${val.toLocaleString()} ${c.symbol}</div>
+                                <small style="color:#94a3b8;">${label}</small>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                previewBody.innerHTML = `
+                    <div style="text-align:center; margin-bottom:25px;">
+                        <div style="width:100px; height:100px; background:${headerGradient}; border-radius:50%; margin:0 auto 15px; display:flex; align-items:center; justify-content:center; font-size:3.5rem; color:white; box-shadow:0 10px 20px rgba(0,0,0,0.1); border:4px solid white;">
+                            ${icon}
+                        </div>
+                        <h2 style="margin:0; font-weight:900; color:#1e293b;">${e.name}</h2>
+                        <div style="color:var(--primary-color); font-weight:700; margin-top:5px;">${e.role || 'موظف'}</div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:25px;">
+                        <div style="background:#f8fafc; padding:15px; border-radius:16px; border:1px solid #f1f5f9;">
+                            <small style="color:#64748b; display:block; margin-bottom:4px;">📞 رقم الهاتف</small>
+                            <div style="font-weight:700; font-size:1.1rem;">${e.phone || 'غير مسجل'}</div>
+                        </div>
+                        <div style="background:#f8fafc; padding:15px; border-radius:16px; border:1px solid #f1f5f9;">
+                            <small style="color:#64748b; display:block; margin-bottom:4px;">💰 الراتب الأساسي</small>
+                            <div style="font-weight:700; font-size:1.1rem; color:#10b981;">${parseFloat(e.salary || 0).toLocaleString()}</div>
+                        </div>
+                    </div>
+
+                    <div style="background:white; border:1px solid #f1f5f9; border-radius:20px; padding:20px; box-shadow:0 4px 15px rgba(0,0,0,0.02);">
+                        <div style="font-weight:800; margin-bottom:15px; color:#1e293b; display:flex; align-items:center; gap:8px;">
+                            <span><i class="fa-solid fa-scale-balanced"></i></span> كشف الأرصدة الحالي:
+                        </div>
+                        ${balanceRows}
+                    </div>
+
+                    <div style="margin-top:20px; font-size:0.85rem; color:#94a3b8; text-align:center;">
+                        تاريخ الانضمام: ${new Date(e.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}
+                    </div>
+                `;
+
+                previewModal.classList.add('active');
+            };
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const id = document.getElementById('emp-id').value;
+                const data = {
+                    name: document.getElementById('emp-name').value,
+                    phone: document.getElementById('emp-phone').value,
+                    role: document.getElementById('emp-role').value,
+                    salary: document.getElementById('emp-salary').value,
+                    isPartner: document.getElementById('emp-is-partner').checked
+                };
+
+                if (id) {
+                    store.updateEmployee({ id, ...data });
+                    UI.alert('تم تحديث بيانات الموظف', 'نجاح');
+                } else {
+                    store.addEmployee(data);
+                    UI.alert('تم إضافة الموظف بنجاح', 'نجاح');
+                }
+
+                resetForm();
+                closeEmployeeModal();
+                renderEmployees();
+            });
+
+            renderEmployees();
+        });
+    </script>
+</body>
+
+</html>
