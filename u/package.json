@@ -1,0 +1,16 @@
+{
+  "name": "htmld",
+  "version": "1.0.0",
+  "description": "Desktop POS System",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^39.2.7"
+  }
+}

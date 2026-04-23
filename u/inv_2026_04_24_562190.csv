@@ -1,0 +1,5 @@
+﻿Code,Reference Number,Customer,Phone,Name,City,Village,Description,Actual value,Price,Calculated Price,Delivery Cost,Extra Delivery Cost,Extra Price Fee,Extra Size Fee,Delivery date,Status,Net,QR,Note,Invoice No.,Customer private note
+gtvd-0782536,,Mohammad maswadeh,0506164513,حسن زيدان,شمال ٤٨,كفر مندا,مجوهرات,175,245,0,0,0,0,0,,Returned,0,shiply_yu52191,,#562190,محمد 245
+gtvd-8893643,,Mohammad maswadeh,0527092814,زكريا عابد الجبارين,الخليل,يطا,مجوهرات,380,400,400,20,0,0,0,2026-04-23T13:23:00.000000Z,Delivered,380,null,استلام مبلغ 400 شيكل فقط بدون طرد سيتم إرسال الطرد إلى القدس,#562190,
+gtvd-3090328,,Mohammad maswadeh,0566301765,محمد مسودة,الخليل,الخليل,مجوهرات,20,40,40,20,0,0,0,2026-04-22T11:56:09.000000Z,Delivered,20,shiply_yg13359,,#562190,
+,,,,,,,,,,,,,,,Total:,400,,,,

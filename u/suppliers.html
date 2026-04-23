@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الموردين | المحاسب الذكي</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+</head>
+
+<body>
+
+    <main>
+        <div class="page-header">
+            <h1 class="page-title"><i class="fa-solid fa-handshake-angle"></i> الموردين</h1>
+            <div class="header-actions" style="display:flex; gap:10px;">
+                <button class="btn btn-secondary" onclick="exportToExcel()"><i class="fa-solid fa-file-excel"></i> تصدير إكسل</button>
+                <button class="btn btn-secondary" onclick="printSuppliersList()"><i class="fa-solid fa-print"></i> طباعة القائمة</button>
+                <button class="btn btn-primary" onclick="openSupplierModal()"><i class="fa-solid fa-user-plus"></i> إضافة مورد</button>
+            </div>
+        </div>
+
+        <!-- Supplier Form Modal -->
+        <div class="modal-overlay" id="supplier-modal">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h2 id="form-title" style="margin:0; font-size:1.3rem;">إضافة مورد جديد</h2>
+                    <button onclick="closeSupplierModal()"
+                        style="background:none; border:none; font-size:1.8rem; cursor:pointer; color:#94a3b8;">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="supplier-form">
+                        <input type="hidden" id="sup-id">
+                        <div class="form-group">
+                            <label>اسم المورد</label>
+                            <input type="text" id="sup-name" required placeholder="اسم الشركة أو الشخص">
+                        </div>
+                        <div class="form-group">
+                            <label>رقم الهاتف</label>
+                            <input type="text" id="sup-phone" placeholder="05xxxxxxxx">
+                        </div>
+
+                        <div style="display:flex; gap:10px; margin-top:1rem;">
+                            <button type="submit" class="btn btn-primary" id="btn-submit" style="flex:1;">+ حفظ
+                                المورد</button>
+                            <button type="button" class="btn" style="background:#94a3b8; color:white;"
+                                onclick="closeSupplierModal()">إلغاء</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 2rem;">
+            <h3>قائمة الموردين</h3>
+            <div id="suppliers-list" class="products-grid">
+                <!-- Loaded dynamically -->
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="pay-modal">
+            <div class="modal-content" style="max-width: 450px;">
+                <div class="modal-header">
+                    <h3 class="modal-title">تسديد رصيد مورد</h3>
+                    <button class="modal-close" onclick="closePayModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p id="pay-modal-msg" style="margin-bottom:1rem; font-weight:600; color:#475569; line-height:1.5;"></p>
+                    <form id="pay-form">
+                        <input type="hidden" id="pay-sup-id">
+                        <div class="form-group">
+                            <label>المبلغ المراد تسديده</label>
+                            <input type="number" id="pay-amount" required step="0.01" placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label>العملة</label>
+                            <select id="pay-currency" class="filter-input" style="width:100%;">
+                                <!-- Dynamic -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>ملاحظات (اختياري)</label>
+                            <textarea id="pay-notes" placeholder="ملاحظات توضيحية..." style="width:100%; height:80px; border:1px solid #cbd5e1; border-radius:8px; padding:10px; font-family:inherit;"></textarea>
+                        </div>
+                        <div style="display:flex; gap:10px; margin-top:1rem;">
+                            <button type="submit" class="btn btn-primary" style="flex:1;">تأكيد الدفع <i class="fa-solid fa-check"></i></button>
+                            <button type="button" class="btn btn-secondary" onclick="closePayModal()">إلغاء</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="history-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title" id="modal-title">سجل المشتريات</h3>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <button class="btn btn-secondary" onclick="printHistory()"
+                            style="padding:6px 12px; font-size:0.85rem;"><i class="fa-solid fa-print"></i> طباعة السجل</button>
+                        <button class="modal-close" onclick="closeHistoryModal()">&times;</button>
+                    </div>
+                </div>
+                <div class="modal-body"
+                    style="padding:15px; background:#f8fafc; border-bottom:1px solid #e2e8f0; display:flex; gap:10px; align-items:flex-end;">
+                    <div style="flex:1;">
+                        <label style="display:block; font-size:0.8rem; color:#64748b; margin-bottom:4px;">من
+                            تاريخ:</label>
+                        <input type="date" id="history-start-date"
+                            style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:6px;">
+                    </div>
+                    <div style="flex:1;">
+                        <label style="display:block; font-size:0.8rem; color:#64748b; margin-bottom:4px;">إلى
+                            تاريخ:</label>
+                        <input type="date" id="history-end-date"
+                            style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:6px;">
+                    </div>
+                    <button class="btn btn-primary" onclick="refreshHistory()" style="padding:8px 15px;"><i class="fa-solid fa-magnifying-glass"></i>
+                        تصفية</button>
+                </div>
+                <div class="modal-body" id="modal-body">
+                    <!-- Dynamic -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="data.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('supplier-form');
+            const tbody = document.getElementById('suppliers-list'); // Keeping variable name though it's a div now
+            const supplierModal = document.getElementById('supplier-modal');
+
+            // Edit Mode Vars
+            const idInput = document.getElementById('sup-id');
+            const nameInput = document.getElementById('sup-name');
+            const phoneInput = document.getElementById('sup-phone');
+            const submitBtn = document.getElementById('btn-submit');
+            const formTitle = document.getElementById('form-title');
+
+            // Modal Controls
+            window.openSupplierModal = () => {
+                supplierModal.classList.add('active');
+                resetForm();
+            };
+
+            window.closeSupplierModal = () => {
+                supplierModal.classList.remove('active');
+                resetForm();
+            };
+
+            window.resetForm = () => {
+                form.reset();
+                idInput.value = '';
+                formTitle.textContent = 'إضافة مورد جديد';
+                submitBtn.textContent = '+ حفظ المورد';
+                submitBtn.classList.add('btn-primary');
+                submitBtn.classList.remove('btn-success');
+                // Hide cancel button if it was shown (though in this modal structure, it's always there, but we might want to reset its text if needed)
+            };
+
+            function renderSuppliers() {
+                const suppliers = store.getSuppliers();
+                const container = document.getElementById('suppliers-list');
+                container.innerHTML = '';
+
+                suppliers.forEach(s => {
+                    // Calculate Balance Display
+                    let balanceHtml = '';
+                    if (s.balances) {
+                        for (const [curr, amt] of Object.entries(s.balances)) {
+                            if (amt !== 0) balanceHtml += `<div style="color:${amt > 0 ? '#10b981' : '#ef4444'}; font-weight:bold;">${UI.formatMoney(amt, curr)}</div>`;
+                        }
+                    }
+                    if (balanceHtml === '') balanceHtml = '<span style="color:#94a3b8; font-size:0.9rem;">لا يوجد رصيد</span>';
+
+                    const card = document.createElement('div');
+                    card.className = 'product-card';
+                    card.innerHTML = `
+                         <div class="prod-img" style="height: 100px; background: linear-gradient(135deg, #0ea5e9 0%, #10b981 100%); display:flex; align-items:center; justify-content:center; color:white;">
+                            <div style="text-align:center;">
+                                <span style="font-size: 3rem; display:block;"><i class="fa-solid fa-building"></i></span>
+                            </div>
+                        </div>
+                        
+                        <div class="prod-info" style="text-align:center; padding: 1.2rem;">
+                            <div class="prod-name" style="font-size:1.1rem; font-weight:800; color:#1e293b; margin-bottom:10px;">${s.name}</div>
+                            
+                            <div style="background:#f8fafc; padding:10px; border-radius:8px; margin-bottom:12px; text-align:right;">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:0.85rem;">
+                                    <span style="color:#64748b;"><i class="fa-solid fa-phone"></i> الهاتف:</span>
+                                    <span style="font-weight:600; color:#334155;">${s.phone || '-'}</span>
+                                </div>
+                                 <div style="display:flex; justify-content:space-between; font-size:0.85rem; align-items:center;">
+                                    <span style="color:#64748b;"><i class="fa-solid fa-scale-balanced"></i> الرصيد (لنا/علينا):</span>
+                                    <div style="text-align:left;">${balanceHtml}</div>
+                                </div>
+                            </div>
+                            
+                            <div style="display:flex; gap:5px; flex-wrap:wrap;">
+                                <button class="btn" onclick='viewHistory("${s.id}", "${s.name.replace(/"/g, "&quot;")}")' style="flex:1; padding:6px; font-size:0.8rem; background:#6366f1; color:white;"><i class="fa-solid fa-scroll"></i> السجل</button>
+                                <button class="btn" onclick='recordPayment("${s.id}", "${s.name.replace(/"/g, "&quot;")}")' style="flex:1; padding:6px; font-size:0.8rem; background:#f59e0b; color:white;"><i class="fa-solid fa-money-bill-transfer"></i> تسديد</button>
+                            </div>
+                            
+                            <div style="display:flex; gap:5px; margin-top:8px;">
+                                 <button class="btn btn-secondary" onclick="editSup(${JSON.stringify(s).replace(/"/g, '&quot;')})" style="flex:1; padding:6px; font-size:0.8rem;"><i class="fa-solid fa-pen-to-square"></i> تعديل</button>
+                                 <button class="btn btn-danger" onclick="deleteSup('${s.id}')" style="flex:1; padding:6px; font-size:0.8rem;"><i class="fa-solid fa-trash-can"></i> حذف</button>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+
+                if (suppliers.length === 0) {
+                    container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:3rem; color:#94a3b8; background:white; border-radius:16px;">لا يوجد موردين مضافين حالياً.</div>';
+                }
+            }
+
+            // --- Actions ---
+            window.editSup = (s) => {
+                idInput.value = s.id;
+                nameInput.value = s.name;
+                phoneInput.value = s.phone || '';
+
+                formTitle.textContent = 'تعديل المورد: ' + s.name;
+                submitBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> حفظ التعديلات';
+                submitBtn.classList.remove('btn-primary');
+                submitBtn.classList.add('btn-success');
+
+                // Open Modal
+                supplierModal.classList.add('active');
+            };
+
+            window.deleteSup = (id) => {
+                UI.confirm('حذف المورد؟', 'حذف مورد', () => {
+                    store.deleteSupplier(id);
+                    renderSuppliers();
+                });
+            };
+
+
+            // --- Form Submit ---
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const id = idInput.value;
+                const name = nameInput.value;
+                const phone = phoneInput.value;
+
+                const data = { name, phone };
+
+                if (id) {
+                    store.updateSupplier({ id, ...data });
+                    UI.alert('تم التعديل', 'نجاح');
+                } else {
+                    store.addSupplier(data);
+                    UI.alert('تم الإضافة', 'نجاح');
+                }
+                resetForm();
+                closeSupplierModal();
+                renderSuppliers();
+            });
+
+            const payModal = document.getElementById('pay-modal');
+            const payForm = document.getElementById('pay-form');
+            window.closePayModal = () => payModal.classList.remove('active');
+
+            window.recordPayment = (id, name) => {
+                document.getElementById('pay-sup-id').value = id;
+                document.getElementById('pay-modal-msg').textContent = `أدخل المبلغ الذي تريد تسديده للمورد ${name}:`;
+                document.getElementById('pay-amount').value = '';
+                document.getElementById('pay-notes').value = '';
+
+                // Populate currencies
+                const curSelect = document.getElementById('pay-currency');
+                curSelect.innerHTML = store.getCurrencies().map(c => `<option value="${c.code}">${c.name} (${c.symbol})</option>`).join('');
+
+                payModal.classList.add('active');
+            };
+
+            payForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const id = document.getElementById('pay-sup-id').value;
+                const amount = document.getElementById('pay-amount').value;
+                const currency = document.getElementById('pay-currency').value;
+                const notes = document.getElementById('pay-notes').value;
+
+                if (!amount || isNaN(amount)) return UI.toast('يرجى إدخال مبلغ صحيح', 'danger');
+
+                try {
+                    store.paySupplier(id, amount, currency, notes);
+                    renderSuppliers();
+                    closePayModal();
+                    UI.alert('تم تسجيل الدفعة بنجاح', 'نجاح');
+                } catch (err) {
+                    UI.toast('خطأ: ' + err.message, 'danger');
+                }
+            });
+
+            // --- History ---
+            const modal = document.getElementById('history-modal');
+            const modalBody = document.getElementById('modal-body');
+            const modalTitle = document.getElementById('modal-title');
+            let currentHistorySup = { id: '', name: '' };
+
+            window.closeHistoryModal = () => modal.classList.remove('active');
+
+            window.printSuppliersList = () => {
+                const suppliers = store.getSuppliers();
+                const branding = store.getBranding();
+
+                const win = window.open('', '_blank');
+                win.document.write(`
+                    <!DOCTYPE html>
+                    <html dir="rtl" lang="ar">
+                    <head>
+                        <title>قائمة الموردين</title>
+                        <style>
+                            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; line-height: 1.6; }
+                            .header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #334155; padding-bottom: 20px; }
+                            .header img { max-height: 80px; margin-bottom: 10px; }
+                            .header h1 { margin: 5px 0; color: #1e293b; }
+                            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                            th, td { border: 1px solid #cbd5e1; padding: 12px; text-align: right; }
+                            th { background-color: #f1f5f9; color: #334155; font-weight: bold; }
+                            .balance-pos { color: #059669; font-weight: bold; }
+                            .balance-neg { color: #dc2626; font-weight: bold; }
+                            .footer { margin-top: 40px; text-align: center; font-size: 0.9rem; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+                            @media print { button { display: none; } }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="header">
+                            ${branding.logo ? `<img src="${branding.logo}">` : ''}
+                            <h1>${branding.name || 'نظام المحاسب الذكي'}</h1>
+                            <h2>تقرير قائمة الموردين والأرصدة</h2>
+                            <p>تاريخ التقرير: ${new Date().toLocaleDateString('ar-EG')} - ${new Date().toLocaleTimeString('ar-EG')}</p>
+                        </div>
+                        
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>اسم المورد</th>
+                                    <th>رقم الهاتف</th>
+                                    <th>الأرصدة الحالية</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${suppliers.map(s => {
+                    let balances = [];
+                    if (s.balances) {
+                        for (const [curr, amt] of Object.entries(s.balances)) {
+                            if (amt !== 0) balances.push(`<span class="${amt > 0 ? 'balance-pos' : 'balance-neg'}">${UI.formatMoney(amt, curr)}</span>`);
+                        }
+                    }
+                    return `
+                                        <tr>
+                                            <td style="font-weight:bold;">${s.name}</td>
+                                            <td>${s.phone || '-'}</td>
+                                            <td>${balances.join(' | ') || 'لا يوجد رصيد'}</td>
+                                        </tr>
+                                    `;
+                }).join('')}
+                            </tbody>
+                        </table>
+
+                        <div class="footer">
+                            <p>تم استخراج هذا التقرير تلقائياً بواسطة نظام ${branding.name || 'المحاسب الذكي'}</p>
+                        </div>
+                        <script>
+                            window.onload = function() { window.print(); window.close(); };
+                        <\/script>
+                    </body>
+                    </html>
+                `);
+                win.document.close();
+            };
+
+            window.exportToExcel = () => {
+                try {
+                    const suppliers = store.getSuppliers();
+                    const data = suppliers.map(s => {
+                        const row = {
+                            'اسم المورد': s.name,
+                            'رقم الهاتف': s.phone || '-'
+                        };
+
+                        // Add balances
+                        if (s.balances) {
+                            for (const [curr, amt] of Object.entries(s.balances)) {
+                                if (amt !== 0) row[`رصيد (${curr})`] = amt;
+                            }
+                        }
+                        return row;
+                    });
+
+                    const ws = XLSX.utils.json_to_sheet(data);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "الموردين");
+                    XLSX.writeFile(wb, "suppliers_list.xlsx");
+                } catch (err) {
+                    alert('حدث خطأ أثناء التصدير: ' + err.message);
+                }
+            };
+
+            window.printHistory = () => {
+                const title = modalTitle.textContent;
+                const bodyContent = modalBody.innerHTML;
+                const start = document.getElementById('history-start-date').value;
+                const end = document.getElementById('history-end-date').value;
+                const branding = store.getBranding();
+
+                const win = window.open('', '_blank');
+                win.document.write(`
+                    <!DOCTYPE html>
+                    <html dir="rtl" lang="ar">
+                    <head>
+                        <title>${title}</title>
+                        <style>
+                            body { font-family: 'Segoe UI', system-ui; padding: 40px; line-height: 1.6; }
+                            .header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #334155; padding-bottom: 20px; }
+                            .header img { max-height: 80px; margin-bottom: 10px; }
+                            h2 { margin: 5px 0; color: #1e293b; }
+                            .date-range { color: #64748b; margin-bottom: 20px; font-weight: bold; }
+                            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                            th, td { border: 1px solid #cbd5e1; padding: 12px; text-align: right; }
+                            th { background-color: #f1f5f9; font-weight: bold; color: #334155; }
+                            @media print { button { display: none; } }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="header">
+                            ${branding.logo ? `<img src="${branding.logo}">` : ''}
+                            <h2>${title}</h2>
+                            <div class="date-range">الفترة من: ${start || 'البداية'} | إلى: ${end || 'اليوم'}</div>
+                        </div>
+                        ${bodyContent}
+                        <div style="margin-top: 40px; text-align: center; font-size: 0.9rem; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+                            <p>تم استخراج هذا التقرير تلقائياً بواسطة نظام ${branding.name || 'المحاسب الذكي'}</p>
+                        </div>
+                        <script>
+                            window.onload = function() { window.print(); window.close(); };
+                        <\/script>
+                    </body>
+                    </html>
+                `);
+                win.document.close();
+            };
+
+            window.viewHistory = (id, name) => {
+                currentHistorySup = { id, name };
+
+                // Set default dates: first day of current month to today
+                const now = new Date();
+                const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                document.getElementById('history-start-date').value = firstDay.toISOString().split('T')[0];
+                document.getElementById('history-end-date').value = now.toISOString().split('T')[0];
+
+                refreshHistory();
+                modal.classList.add('active');
+            };
+
+            window.refreshHistory = () => {
+                const { id, name } = currentHistorySup;
+                const startDate = document.getElementById('history-start-date').value;
+                const endDate = document.getElementById('history-end-date').value;
+
+                let purchases = store.getSupplierHistory(id);
+                modalTitle.textContent = `سجل للمورد: ${name}`;
+
+                // Apply Filters
+                if (startDate) {
+                    const s = new Date(startDate);
+                    s.setHours(0, 0, 0, 0);
+                    purchases = purchases.filter(p => new Date(p.createdAt) >= s);
+                }
+                if (endDate) {
+                    const e = new Date(endDate);
+                    e.setHours(23, 59, 59, 999);
+                    purchases = purchases.filter(p => new Date(p.createdAt) <= e);
+                }
+
+                let html = `<table style="width:100%;"><thead><tr><th>التاريخ</th><th>المبلغ</th><th>ملاحظات</th></tr></thead><tbody>`;
+
+                purchases.forEach(p => {
+                    html += `
+                        <tr>
+                            <td>${new Date(p.createdAt).toLocaleDateString('ar-EG')}</td>
+                            <td style="font-weight:bold;">${UI.formatMoney(p.amount, p.currency)}</td>
+                            <td>${p.notes || '-'}</td>
+                        </tr>
+                    `;
+                });
+                if (purchases.length === 0) html += '<tr><td colspan="3" style="text-align:center;">لا توجد معاملات في هذه الفترة.</td></tr>';
+                html += '</tbody></table>';
+
+                modalBody.innerHTML = html;
+            };
+
+            renderSuppliers();
+        });
+    </script>
+</body>
+
+</html>
