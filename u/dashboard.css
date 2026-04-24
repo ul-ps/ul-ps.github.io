@@ -1,0 +1,17 @@
+/* --- Dashboard Specific Styles --- */
+
+.dashboard-header-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2.5rem;
+}
+
+.dashboard-title {
+    font-size: 2rem;
+    color: #0f172a;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+/* Add any other index-specific styles here */

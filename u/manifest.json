@@ -1,0 +1,21 @@
+{
+  "name": "المحاسب الذكي - مجوهرات Jewellery UL",
+  "short_name": "المحاسب",
+  "description": "نظام إدارة المحاسبة والمخزون والطلبات",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#6366f1",
+  "theme_color": "#6366f1",
+  "icons": [
+    {
+      "src": "favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

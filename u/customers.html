@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>العملاء | مجوهرات Jewellery UL</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="management.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+</head>
+
+<body class="customers-page">
+
+    <main>
+        <div class="mgmt-header">
+            <h1 class="mgmt-title"><i class="fa-solid fa-users"></i> إدارة العملاء</h1>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="exportToExcel()"><i class="fa-solid fa-file-excel"></i> تصدير
+                    إكسل</button>
+                <button class="btn" style="background:#6366f1; color:white;"
+                    onclick="document.getElementById('csv-import').click()">
+                    <i class="fa-solid fa-file-import"></i> استيراد CSV
+                </button>
+                <input type="file" id="csv-import" style="display:none;" accept=".csv" multiple
+                    onchange="importFromCSV(event)">
+                <button class="btn btn-primary" onclick="openCustomerModal()"><i class="fa-solid fa-user-plus"></i>
+                    إضافة عميل</button>
+            </div>
+        </div>
+
+        <div class="filters-bar" style="margin-bottom: 2rem;">
+            <div class="search-input-wrapper">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="cust-search" class="search-input-premium"
+                    placeholder="ابحث عن عميل بالاسم، رقم الهاتف، أو العنوان..."
+                    oninput="currentPage = 1; renderCustomers()">
+            </div>
+        </div>
+
+        <!-- Customer Form Modal -->
+        <div class="modal-overlay" id="customer-modal">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h2 style="margin:0; font-size:1.3rem;">إضافة عميل جديد</h2>
+                    <button onclick="closeCustomerModal()"
+                        style="background:none; border:none; font-size:1.8rem; cursor:pointer; color:#94a3b8;">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="add-cust-form">
+                        <input type="hidden" id="cust-id">
+                        <div class="form-group">
+                            <label>اسم العميل</label>
+                            <input type="text" id="cust-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>رقم الهاتف</label>
+                            <input type="text" id="cust-phone">
+                        </div>
+                        <div class="form-group">
+                            <label>المنطقة / العنوان</label>
+                            <input type="text" id="cust-address">
+                        </div>
+                        <div style="display:flex; gap:10px; margin-top:1rem;">
+                            <button type="submit" class="btn btn-primary" style="flex:1;">+ حفظ العميل</button>
+                            <button type="button" class="btn" style="background:#94a3b8; color:white;"
+                                onclick="closeCustomerModal()">إلغاء</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 2rem;">
+            <div id="cust-list" class="management-grid">
+                <!-- Loaded dynamically -->
+            </div>
+
+            <!-- Pagination -->
+            <div id="pagination-container"
+                style="display:flex; justify-content:center; gap:8px; margin-top:30px; flex-wrap:wrap;">
+                <!-- Dynamic -->
+            </div>
+        </div>
+    </main>
+
+    <div class="modal-overlay" id="import-preview-modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fa-solid fa-list-check"></i> معاينة البيانات المستوردة</h3>
+                <button class="modal-close" onclick="closeImportModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div
+                    style="margin-bottom:15px; background:#f0f9ff; padding:10px; border-radius:8px; font-size:0.85rem; color:#0369a1;">
+                    <i class="fa-solid fa-circle-info"></i> قم بتحديد العملاء الذين ترغب في إضافتهم إلى النظام.
+                </div>
+                <div style="max-height: 400px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 12px;">
+                    <table class="items-table" style="width:100%; border-collapse: collapse;">
+                        <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 10;">
+                            <tr>
+                                <th style="width: 40px; text-align: center;"><input type="checkbox"
+                                        id="select-all-import" onchange="toggleAllImport(this.checked)"></th>
+                                <th>اسم العميل</th>
+                                <th>الهاتف</th>
+                                <th>العنوان</th>
+                            </tr>
+                        </thead>
+                        <tbody id="import-preview-body">
+                            <!-- Loaded via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer"
+                style="padding: 1.5rem; background: #f8fafc; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 10px;">
+                <span id="import-count-label"
+                    style="margin-inline-end: auto; align-self: center; font-weight: bold; color: var(--primary-color);">0
+                    مختارين</span>
+                <button class="btn btn-secondary" onclick="closeImportModal()">إلغاء</button>
+                <button class="btn btn-primary" onclick="confirmImportSelected()">إضافة المختارين <i
+                        class="fa-solid fa-user-plus"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="history-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-title">سجل الطلبات</h3>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <button class="btn btn-secondary" onclick="printHistory()"
+                        style="padding:6px 12px; font-size:0.85rem;"><i class="fa-solid fa-print"></i> طباعة
+                        السجل</button>
+                    <button class="modal-close" onclick="closeHistoryModal()">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body"
+                style="padding:15px; background:#f8fafc; border-bottom:1px solid #e2e8f0; display:flex; gap:10px; align-items:flex-end;">
+                <div style="flex:1;">
+                    <label style="display:block; font-size:0.8rem; color:#64748b; margin-bottom:4px;">من تاريخ:</label>
+                    <input type="date" id="history-start-date"
+                        style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:6px;">
+                </div>
+                <div style="flex:1;">
+                    <label style="display:block; font-size:0.8rem; color:#64748b; margin-bottom:4px;">إلى تاريخ:</label>
+                    <input type="date" id="history-end-date"
+                        style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:6px;">
+                </div>
+                <button class="btn btn-primary" onclick="refreshHistory()" style="padding:8px 15px;"><i
+                        class="fa-solid fa-magnifying-glass"></i> تصفية</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Dynamic -->
+            </div>
+        </div>
+    </div>
+    </main>
+
+    <script src="data.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('add-cust-form');
+            const customerModal = document.getElementById('customer-modal');
+
+            let currentPage = 1;
+            const itemsPerPage = 24;
+
+            // Modal Controls
+            window.openCustomerModal = () => {
+                customerModal.classList.add('active');
+                resetForm();
+            };
+
+            window.closeCustomerModal = () => {
+                customerModal.classList.remove('active');
+                resetForm();
+            };
+
+            // Modal
+            const modal = document.getElementById('history-modal');
+            const modalBody = document.getElementById('modal-body');
+            const modalTitle = document.getElementById('modal-title');
+
+            window.closeHistoryModal = () => modal.classList.remove('active');
+
+            function renderCustomers() {
+                const query = document.getElementById('cust-search').value.toLowerCase();
+                const customers = store.getCustomers().filter(c =>
+                    c.name.toLowerCase().includes(query) ||
+                    (c.phone && c.phone.includes(query)) ||
+                    (c.address && c.address.toLowerCase().includes(query))
+                );
+
+                const totalItems = customers.length;
+                const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+                if (currentPage > totalPages && totalPages > 0) currentPage = totalPages;
+                if (currentPage < 1) currentPage = 1;
+
+                const startIdx = (currentPage - 1) * itemsPerPage;
+                const paginated = customers.slice(startIdx, startIdx + itemsPerPage);
+
+                const container = document.getElementById('cust-list');
+                container.innerHTML = '';
+
+                paginated.forEach(c => {
+                    const card = document.createElement('div');
+                    card.className = 'management-card';
+                    card.innerHTML = `
+                         <div class="card-header-img" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-title">${c.name}</div>
+                            
+                            <div class="info-box">
+                                <div class="info-row">
+                                    <span class="info-label"><i class="fa-solid fa-phone"></i> الهاتف:</span>
+                                    <span class="info-value">${c.phone || 'غير متوفر'}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label"><i class="fa-solid fa-location-dot"></i> العنوان:</span>
+                                    <span class="info-value">${c.address || 'غير محدد'}</span>
+                                </div>
+                                <div class="info-row" style="opacity:0.7; font-size:0.75rem; margin-top:8px;">
+                                    <span class="info-label"><i class="fa-solid fa-calendar-days"></i> تاريخ الإضافة:</span>
+                                    <span class="info-value">${new Date(c.createdAt).toLocaleDateString('ar-EG')}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="actions-row">
+                                <button class="btn btn-primary btn-mini" onclick="viewHistory('${c.id}', '${c.name}')" style="flex:2;">
+                                    <i class="fa-solid fa-scroll"></i> السجل
+                                </button>
+                                <button class="btn btn-secondary btn-mini" onclick='editCustomer(${JSON.stringify(c)})'>
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                <button class="btn btn-danger btn-mini" onclick="deleteCustomer('${c.id}')">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+
+                renderPagination(totalPages);
+
+                if (customers.length === 0) {
+                    container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:3rem; color:#94a3b8; background:white; border-radius:16px;">لا يوجد عملاء مضافين حالياً.</div>';
+                    document.getElementById('pagination-container').innerHTML = '';
+                }
+            }
+
+            function renderPagination(totalPages) {
+                const pagContainer = document.getElementById('pagination-container');
+                pagContainer.innerHTML = '';
+                if (totalPages <= 1) return;
+
+                // Prev
+                const prevBtn = document.createElement('button');
+                prevBtn.className = 'btn btn-secondary';
+                prevBtn.innerHTML = '<i class="fa-solid fa-chevron-right"></i>';
+                prevBtn.disabled = currentPage === 1;
+                prevBtn.onclick = () => { currentPage--; renderCustomers(); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+                pagContainer.appendChild(prevBtn);
+
+                // Pages
+                let startPage = Math.max(1, currentPage - 2);
+                let endPage = Math.min(totalPages, startPage + 4);
+                if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+
+                for (let i = startPage; i <= endPage; i++) {
+                    const btn = document.createElement('button');
+                    btn.className = i === currentPage ? 'btn btn-primary' : 'btn btn-secondary';
+                    btn.style.minWidth = '40px';
+                    btn.textContent = i;
+                    btn.onclick = () => { currentPage = i; renderCustomers(); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+                    pagContainer.appendChild(btn);
+                }
+
+                // Next
+                const nextBtn = document.createElement('button');
+                nextBtn.className = 'btn btn-secondary';
+                nextBtn.innerHTML = '<i class="fa-solid fa-chevron-left"></i>';
+                nextBtn.disabled = currentPage === totalPages;
+                nextBtn.onclick = () => { currentPage++; renderCustomers(); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+                pagContainer.appendChild(nextBtn);
+            }
+
+            // --- Form & Edit Logic ---
+            window.resetForm = () => {
+                form.reset();
+                document.getElementById('cust-id').value = '';
+                document.querySelector('#customer-modal h2').textContent = 'إضافة عميل جديد';
+                const btn = document.querySelector('#add-cust-form button[type="submit"]');
+                btn.textContent = '+ حفظ العميل';
+                btn.classList.add('btn-primary');
+                btn.classList.remove('btn-success');
+            };
+
+            window.editCustomer = (c) => {
+                document.getElementById('cust-id').value = c.id;
+                document.getElementById('cust-name').value = c.name;
+                document.getElementById('cust-phone').value = c.phone || '';
+                document.getElementById('cust-address').value = c.address || '';
+
+                document.querySelector('#customer-modal h2').textContent = 'تعديل بيانات العميل';
+                const btn = document.querySelector('#add-cust-form button[type="submit"]');
+                btn.textContent = '💾 حفظ التعديلات';
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-success');
+
+                customerModal.classList.add('active');
+            };
+
+            window.deleteCustomer = (id) => {
+                if (confirm('هل أنت متأكد من حذف هذا العميل؟ سيتم حذف سجله بالكامل!')) {
+                    store.deleteCustomer(id);
+                    renderCustomers();
+                }
+            };
+
+            window.printCustomersList = () => {
+                const customers = store.getCustomers();
+                const branding = store.getBranding();
+
+                const win = window.open('', '_blank');
+                win.document.write(`
+                    <!DOCTYPE html>
+                    <html dir="rtl" lang="ar">
+                    <head>
+                        <title>قائمة العملاء</title>
+                        <style>
+                            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; line-height: 1.6; }
+                            .header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #334155; padding-bottom: 20px; }
+                            .header img { max-height: 80px; margin-bottom: 10px; }
+                            .header h1 { margin: 5px 0; color: #1e293b; }
+                            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                            th, td { border: 1px solid #cbd5e1; padding: 12px; text-align: right; }
+                            th { background-color: #f1f5f9; color: #334155; font-weight: bold; }
+                            .footer { margin-top: 40px; text-align: center; font-size: 0.9rem; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+                            @media print { button { display: none; } }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="header">
+                            ${branding.logo ? `<img src="${branding.logo}">` : ''}
+                            <h1>${branding.name || 'نظام المحاسب الذكي'}</h1>
+                            <h2>تقرير قائمة العملاء</h2>
+                            <p>تاريخ التقرير: ${new Date().toLocaleDateString('ar-EG')} - ${new Date().toLocaleTimeString('ar-EG')}</p>
+                        </div>
+                        
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>اسم العميل</th>
+                                    <th>رقم الهاتف</th>
+                                    <th>العنوان / المنطقة</th>
+                                    <th>تاريخ الإضافة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${customers.map(c => `
+                                    <tr>
+                                        <td style="font-weight:bold;">${c.name}</td>
+                                        <td>${c.phone || '-'}</td>
+                                        <td>${c.address || '-'}</td>
+                                        <td>${new Date(c.createdAt).toLocaleDateString('ar-EG')}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+
+                        <div class="footer">
+                            <p>تم استخراج هذا التقرير تلقائياً بواسطة نظام ${branding.name || 'المحاسب الذكي'}</p>
+                        </div>
+                        <script>
+                            window.onload = function() { window.print(); window.close(); };
+                        <\/script>
+                    </body>
+                    </html>
+                `);
+                win.document.close();
+            };
+
+            window.exportToExcel = () => {
+                try {
+                    const customers = store.getCustomers();
+                    const data = customers.map(c => ({
+                        'اسم العميل': c.name,
+                        'رقم الهاتف': c.phone || '-',
+                        'العنوان': c.address || '-',
+                        'تاريخ الإضافة': new Date(c.createdAt).toLocaleDateString('ar-EG')
+                    }));
+
+                    const ws = XLSX.utils.json_to_sheet(data);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "العملاء");
+                    XLSX.writeFile(wb, "customers_list.xlsx");
+                } catch (err) {
+                    alert('حدث خطأ أثناء التصدير: ' + err.message);
+                }
+            };
+
+            let tempImportData = [];
+            window.importFromCSV = (event) => {
+                const files = event.target.files;
+                if (!files || files.length === 0) return;
+
+                tempImportData = [];
+                let filesProcessed = 0;
+
+                Array.from(files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const content = e.target.result;
+                        const lines = content.split(/\r?\n/);
+
+                        for (let i = 1; i < lines.length; i++) {
+                            const line = lines[i].trim();
+                            if (!line || line.startsWith(',,,,') || line.includes('Total:')) continue;
+
+                            const cols = line.split(',');
+                            if (cols.length < 5) continue;
+
+                            const phone = cols[3]?.trim();
+                            const name = cols[4]?.trim();
+                            const city = cols[5]?.trim();
+                            const village = cols[6]?.trim();
+                            const address = `${city || ''} - ${village || ''}`.replace(/^ - | - $/g, '').trim();
+
+                            if (name) {
+                                tempImportData.push({ name, phone: phone || '', address: address || '', selected: true });
+                            }
+                        }
+
+                        filesProcessed++;
+                        if (filesProcessed === files.length) {
+                            renderImportPreview();
+                            document.getElementById('import-preview-modal').classList.add('active');
+                            event.target.value = '';
+                        }
+                    };
+                    reader.readAsText(file, 'UTF-8');
+                });
+            };
+
+            function renderImportPreview() {
+                const body = document.getElementById('import-preview-body');
+                body.innerHTML = '';
+
+                tempImportData.forEach((item, idx) => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="text-align:center;"><input type="checkbox" ${item.selected ? 'checked' : ''} onchange="tempImportData[${idx}].selected = this.checked; updateImportCount()"></td>
+                        <td>${item.name}</td>
+                        <td>${item.phone}</td>
+                        <td>${item.address}</td>
+                    `;
+                    body.appendChild(tr);
+                });
+                updateImportCount();
+            }
+
+            window.toggleAllImport = (val) => {
+                tempImportData.forEach(item => item.selected = val);
+                renderImportPreview();
+            };
+
+            window.updateImportCount = () => {
+                const count = tempImportData.filter(i => i.selected).length;
+                document.getElementById('import-count-label').textContent = `${count} مختارين`;
+            };
+
+            window.closeImportModal = () => {
+                document.getElementById('import-preview-modal').classList.remove('active');
+            };
+
+            window.confirmImportSelected = () => {
+                const selected = tempImportData.filter(i => i.selected);
+                if (selected.length === 0) return UI.toast('يرجى اختيار عميل واحد على الأقل', 'warning');
+
+                let added = 0;
+                let skipped = 0;
+                const existingCusts = store.getCustomers();
+
+                selected.forEach(item => {
+                    const exists = existingCusts.find(c => c.phone === item.phone && item.phone !== '');
+                    if (!exists) {
+                        store.addCustomer({ name: item.name, phone: item.phone, address: item.address });
+                        added++;
+                    } else {
+                        skipped++;
+                    }
+                });
+
+                UI.toast(`تمت إضافة ${added} عملاء. (تخطى ${skipped} موجودين مسبقاً)`);
+                closeImportModal();
+                renderCustomers();
+            };
+
+            // --- History Logic ---
+            let currentHistoryCustomer = { id: '', name: '' };
+
+            window.closeHistoryModal = () => modal.classList.remove('active');
+
+            window.printHistory = () => {
+                const title = modalTitle.textContent;
+                const bodyContent = modalBody.innerHTML;
+                const start = document.getElementById('history-start-date').value;
+                const end = document.getElementById('history-end-date').value;
+                const branding = store.getBranding();
+
+                const win = window.open('', '_blank');
+                win.document.write(`
+                    <!DOCTYPE html>
+                    <html dir="rtl" lang="ar">
+                    <head>
+                        <title>${title}</title>
+                        <style>
+                            body { font-family: 'Segoe UI', system-ui; padding: 40px; line-height: 1.6; }
+                            .header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #334155; padding-bottom: 20px; }
+                            .header img { max-height: 80px; margin-bottom: 10px; }
+                            h2 { margin: 5px 0; color: #1e293b; }
+                            .date-range { color: #64748b; margin-bottom: 20px; font-weight: bold; }
+                            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                            th, td { border: 1px solid #cbd5e1; padding: 12px; text-align: right; }
+                            th { background-color: #f1f5f9; font-weight: bold; color: #334155; }
+                            @media print { button { display: none; } }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="header">
+                            ${branding.logo ? `<img src="${branding.logo}">` : ''}
+                            <h2>${title}</h2>
+                            <div class="date-range">الفترة من: ${start || 'البداية'} | إلى: ${end || 'اليوم'}</div>
+                        </div>
+                        ${bodyContent}
+                        <div style="margin-top: 40px; text-align: center; font-size: 0.9rem; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+                            <p>تم استخراج هذا التقرير تلقائياً بواسطة نظام ${branding.name || 'المحاسب الذكي'}</p>
+                        </div>
+                        <script>
+                            window.onload = function() { window.print(); window.close(); };
+                        <\/script>
+                    </body>
+                    </html>
+                `);
+                win.document.close();
+            };
+
+            window.viewHistory = (id, name) => {
+                currentHistoryCustomer = { id, name };
+
+                // Clear dates to show all by default
+                document.getElementById('history-start-date').value = '';
+                document.getElementById('history-end-date').value = '';
+
+                refreshHistory();
+                modal.classList.add('active');
+            };
+
+            window.refreshHistory = () => {
+                const { id, name } = currentHistoryCustomer;
+                const startDate = document.getElementById('history-start-date').value;
+                const endDate = document.getElementById('history-end-date').value;
+
+                let orders = store.getCustomerHistory(id);
+                modalTitle.textContent = `سجل طلبات: ${name}`;
+
+                // Apply Filters
+                if (startDate) {
+                    const s = new Date(startDate);
+                    s.setHours(0, 0, 0, 0);
+                    orders = orders.filter(o => new Date(o.createdAt) >= s);
+                }
+                if (endDate) {
+                    const e = new Date(endDate);
+                    e.setHours(23, 59, 59, 999);
+                    orders = orders.filter(o => new Date(o.createdAt) <= e);
+                }
+
+                let html = `<table style="width:100%;"><thead><tr><th>التاريخ</th><th>المبلغ</th><th>الحالة</th><th>التفاصيل</th></tr></thead><tbody>`;
+
+                orders.forEach(o => {
+                    const status = o.status === 'CANCELLED' ? '<span class="badge badge-danger">ملغي</span>' : '<span class="badge badge-success">مكتمل</span>';
+                    html += `
+                        <tr>
+                            <td>${new Date(o.createdAt).toLocaleDateString('ar-EG')}</td>
+                            <td style="font-weight:bold;">${UI.formatMoney(o.total, o.currency)}</td>
+                            <td>${status}</td>
+                            <td style="font-size:0.85rem; color:#555;">
+                                ${o.itemsText ? o.itemsText.split(', ').map(item => `• ${item}`).join('<br>') : '-'}
+                            </td>
+                        </tr>
+                    `;
+                });
+                if (orders.length === 0) html += '<tr><td colspan="4" style="text-align:center;">لا توجد طلبات في هذه الفترة.</td></tr>';
+                html += '</tbody></table>';
+
+                modalBody.innerHTML = html;
+            };
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const id = document.getElementById('cust-id').value;
+                const name = document.getElementById('cust-name').value;
+                const phone = document.getElementById('cust-phone').value;
+                const address = document.getElementById('cust-address').value;
+
+                if (id) {
+                    store.updateCustomer(id, { name, phone, address });
+                    alert('تم تحديث بيانات العميل');
+                } else {
+                    store.addCustomer({ name, phone, address });
+                    alert('تم إضافة العميل بنجاح');
+                }
+
+                closeCustomerModal();
+                renderCustomers();
+            });
+
+            renderCustomers();
+        });
+    </script>
+</body>
+
+</html>
