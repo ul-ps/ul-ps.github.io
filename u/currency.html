@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>العملات | المحاسب الذكي</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+
+    <main>
+        <div class="page-header">
+            <h1 class="page-title"><i class="fa-solid fa-money-bill-transfer"></i> أسعار الصرف والعملات</h1>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Settings Card -->
+            <div class="stat-card">
+                <h3><i class="fa-solid fa-gear"></i> إعدادات العملة الأساسية</h3>
+                <form id="settings-form">
+                    <div class="form-group">
+                        <label>رمز العملة (مثل $ أو ر.س)</label>
+                        <input type="text" id="cur-symbol" maxlength="5">
+                    </div>
+                    <div class="form-group">
+                        <label>سعر الصرف (مقابل الدولار)</label>
+                        <input type="number" id="cur-rate" step="0.01" min="0.1">
+                        <small style="color: #666;">يستخدم للحسابات المرجعية فقط</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> حفظ الإعدادات</button>
+                </form>
+            </div>
+
+            <!-- Calculator Card -->
+            <div class="stat-card">
+                <h3><i class="fa-solid fa-calculator"></i> حاسبة تحويل سريعة</h3>
+                <div class="form-group">
+                    <label>المبلغ بالعملة المحلية</label>
+                    <input type="number" id="calc-local" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label>المقابل بالدولار ($)</label>
+                    <input type="number" id="calc-usd" placeholder="0.00">
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="data.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const settingsForm = document.getElementById('settings-form');
+            const curSymbolInput = document.getElementById('cur-symbol');
+            const curRateInput = document.getElementById('cur-rate');
+
+            const calcLocal = document.getElementById('calc-local');
+            const calcUsd = document.getElementById('calc-usd');
+
+            // Load Settings
+            const settings = store.getSettings();
+            curSymbolInput.value = settings.currencySymbol || '$';
+            curRateInput.value = settings.currencyRate || 3.75;
+
+            // Save Settings
+            settingsForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                store.updateSettings({
+                    currencySymbol: curSymbolInput.value,
+                    currencyRate: parseFloat(curRateInput.value)
+                });
+                alert('تم حفظ الإعدادات');
+                location.reload(); // To update sidebar logic if needed
+            });
+
+            // Calculator Logic
+            function updateCalc(source) {
+                const rate = parseFloat(curRateInput.value) || 1;
+                if (source === 'local') {
+                    const val = parseFloat(calcLocal.value) || 0;
+                    calcUsd.value = (val / rate).toFixed(2);
+                } else {
+                    const val = parseFloat(calcUsd.value) || 0;
+                    calcLocal.value = (val * rate).toFixed(2);
+                }
+            }
+
+            calcLocal.addEventListener('input', () => updateCalc('local'));
+            calcUsd.addEventListener('input', () => updateCalc('usd'));
+        });
+    </script>
+</body>
+
+</html>
