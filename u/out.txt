@@ -1,7 +1,0 @@
-ROOT KEYS: funds, lastUpdated, products, settings
-PRODUCTS TYPE: object
-PRODUCTS IS ARRAY: true
-PRODUCTS KEYS length: 271
-PRODUCTS LENGTH: 271
-PRODUCTS SPARSE?: 271 vs 271
-SETTINGS KEYS: branding, currencies, deliveryCompanies, expenseCategories, orderSeq, productCategories
