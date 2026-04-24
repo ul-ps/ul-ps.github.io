@@ -1,0 +1,202 @@
+/* --- Purchases & Expenses Shared Styles --- */
+
+/* Page Header */
+.purchases-header,
+.expenses-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2.5rem;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.purchases-title,
+.expenses-title {
+    font-size: 2rem;
+    color: #0f172a;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+/* Mobile Form Bottom Sheet - hidden by default, desktop unaffected */
+.mobile-form-close {
+    display: none;
+}
+
+@media (max-width: 768px) {
+
+    /* Hide form in normal page flow on mobile */
+    .form-list-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1.5rem !important;
+    }
+
+    .form-list-grid > .stat-card {
+        display: none !important;
+    }
+
+    /* Bottom Sheet Overlay */
+    .mobile-form-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 9998;
+        display: none;
+        align-items: flex-end;
+        justify-content: center;
+    }
+
+    .mobile-form-overlay.active {
+        display: flex;
+        animation: fadeIn 0.2s ease;
+    }
+
+    .mobile-form-overlay .stat-card {
+        display: block !important;
+        width: 100%;
+        max-height: 90dvh;
+        border-radius: 24px 24px 0 0 !important;
+        overflow-y: auto;
+        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.25);
+        padding: 24px 20px 30px !important;
+        position: relative;
+        animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes slideUp {
+        from { transform: translateY(100%); }
+        to   { transform: translateY(0); }
+    }
+
+    .mobile-form-close {
+        display: flex !important;
+        position: absolute;
+        top: 16px;
+        left: 16px;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #f1f5f9;
+        border: none;
+        cursor: pointer;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+        color: #64748b;
+        transition: all 0.2s;
+    }
+
+    .mobile-form-close:hover {
+        background: #e2e8f0;
+        color: var(--danger, #ef4444);
+        transform: rotate(90deg);
+    }
+
+    /* Page Header mobile */
+    .purchases-header,
+    .expenses-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        margin-bottom: 1.5rem;
+    }
+
+    .purchases-header .header-actions,
+    .expenses-header .header-actions {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .purchases-header .btn,
+    .expenses-header .btn {
+        flex: 1;
+    }
+
+    /* Convert table to card layout */
+    .table-container {
+        padding: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    table,
+    thead,
+    tbody {
+        display: block;
+        width: 100%;
+    }
+
+    thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+
+    tbody tr {
+        display: flex;
+        flex-direction: column;
+        background: white;
+        border-radius: 16px;
+        padding: 14px;
+        margin-bottom: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        border: 1px solid #f1f5f9;
+    }
+
+    tbody td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 7px 0 !important;
+        border: none !important;
+        border-bottom: 1px dashed #f1f5f9 !important;
+        font-size: 0.85rem;
+        color: #1e293b;
+    }
+
+    tbody td:last-child {
+        border-bottom: none !important;
+        padding-top: 10px !important;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+
+    tbody td::before {
+        content: attr(data-label);
+        font-weight: 800;
+        color: #64748b;
+        font-size: 0.75rem;
+        flex-shrink: 0;
+        margin-left: 10px;
+    }
+
+    tbody td:last-child::before {
+        display: none;
+    }
+
+    /* Filters bar on mobile */
+    .filters-bar {
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+
+    .filter-control {
+        width: 100% !important;
+        min-width: unset !important;
+    }
+
+    /* Form full width */
+    .stat-card {
+        width: 100% !important;
+    }
+
+    /* Action buttons in table */
+    tbody td div[style*="display:flex"] {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
